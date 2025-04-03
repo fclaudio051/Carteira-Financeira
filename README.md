@@ -38,6 +38,16 @@ Este é um projeto simples para registro e acompanhamento de ativos financeiros,
 
 Este projeto está disponível em [GitHub Pages](https://fclaudio051.github.io/Carteira-Financeira/).
 
+## Melhorias Futuras
+
+-Integração com APIs para obter preços atualizados dos cripto ativos.
+
+-Implementação de um gráfico para visualizar a distribuição dos investimentos.
+
+-corrigir a adesão de ativos inferiores a 1.
+
+-melhorar o designer da página
+
 ## 📜 Licença
 
 Este projeto é de código aberto 
