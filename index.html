@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Ações</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            text-align: center;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        #formulario {
+            display: none;
+            max-width: 400px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            text-align: left;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 10px;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        table {
+            width: 90%;
+            margin: 20px auto;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+    </style>
+</head>
+<body>
+
+    <button onclick="toggleFormulario()">Adicionar Ativo</button>
+
+    <div id="formulario">
+        <label for="nome">Nome do Ativo:</label>
+        <input type="text" id="nome" placeholder="Ex: ITSA4">
+
+        <label for="valor">Valor de Compra (R$):</label>
+        <input type="number" id="valor" placeholder="Ex: 10.50" oninput="calcularTotal()">
+
+        <label for="quantidade">Quantidade:</label>
+        <input type="number" id="quantidade" placeholder="Ex: 100" oninput="calcularTotal()">
+
+        <label for="total">Total da Compra (R$):</label>
+        <input type="text" id="total" disabled>
+
+        <label for="tipo">Tipo de Ativo:</label>
+        <select id="tipo">
+            <option value="acao">Ação</option>
+            <option value="fii">FII</option>
+            <option value="stock">Stock</option>
+            <option value="cripto">Criptomoeda</option>
+        </select>
+
+        <button id="salvar-btn" onclick="salvarAtivo()">Salvar</button>
+        <button id="excluir-btn" onclick="excluirAtivo()" style="background-color: red; color: white;">Excluir</button>
+    </div>
+
+    <h2>Resumo dos Ativos</h2>
+    <table id="tabela">
+        <thead>
+            <tr>
+                <th>Ticker</th>
+                <th>Quantidade</th>
+                <th>Total Compra (R$)</th>
+                <th>Preço Médio (R$)</th>
+                <th>Valor Atual (R$)</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <h2>Distribuição por Tipo</h2>
+    <table id="tabela-tipos">
+        <thead>
+            <tr>
+                <th>Tipo de Ativo</th>
+                <th>Quantidade Total</th>
+                <th>Porcentagem (%)</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        let ativos = JSON.parse(localStorage.getItem("ativos")) || {};
+        let ativoEditando = null;
+
+        function toggleFormulario() {
+            let form = document.getElementById("formulario");
+            form.style.display = form.style.display === "none" ? "block" : "none";
+        }
+
+        function calcularTotal() {
+            let valor = parseFloat(document.getElementById("valor").value) || 0;
+            let quantidade = parseInt(document.getElementById("quantidade").value) || 0;
+            document.getElementById("total").value = (valor * quantidade).toFixed(2);
+        }
+
+        function salvarAtivo() {
+            let nome = document.getElementById("nome").value.toUpperCase();
+            let valor = parseFloat(document.getElementById("valor").value);
+            let quantidade = parseInt(document.getElementById("quantidade").value);
+            let total = parseFloat(document.getElementById("total").value);
+            let tipo = document.getElementById("tipo").value;
+
+            if (!nome || isNaN(valor) || isNaN(quantidade) || quantidade <= 0) {
+                alert("Preencha todos os campos corretamente.");
+                return;
+            }
+
+            if (ativoEditando) {
+                ativos[ativoEditando] = { quantidade, totalCompra: total, precoMedio: total / quantidade, valorAtual: "Carregando...", tipo };
+            } else {
+                ativos[nome] = { quantidade, totalCompra: total, precoMedio: total / quantidade, valorAtual: "Carregando...", tipo };
+            }
+
+            localStorage.setItem("ativos", JSON.stringify(ativos));
+            atualizarTabela();
+            atualizarTabelaTipos();
+            document.getElementById("formulario").reset();
+            toggleFormulario();
+        }
+
+        function excluirAtivo() {
+            if (ativoEditando) {
+                delete ativos[ativoEditando];
+                localStorage.setItem("ativos", JSON.stringify(ativos));
+                atualizarTabela();
+                atualizarTabelaTipos();
+                document.getElementById("formulario").reset();
+                toggleFormulario();
+            }
+        }
+
+        function selecionarAtivo(nome) {
+            let ativo = ativos[nome];
+            document.getElementById("nome").value = nome;
+            document.getElementById("valor").value = (ativo.totalCompra / ativo.quantidade).toFixed(2);
+            document.getElementById("quantidade").value = ativo.quantidade;
+            document.getElementById("tipo").value = ativo.tipo;
+            document.getElementById("total").value = ativo.totalCompra.toFixed(2);
+
+            ativoEditando = nome;
+            toggleFormulario();
+        }
+
+        async function atualizarTabela() {
+            let tabela = document.querySelector("#tabela tbody");
+            tabela.innerHTML = "";
+
+            for (let ticker in ativos) {
+                let ativo = ativos[ticker];
+                ativo.valorAtual = await fetchStockPrice(ticker);
+
+                let row = tabela.insertRow();
+                row.insertCell(0).innerText = ticker;
+                row.insertCell(1).innerText = ativo.quantidade;
+                row.insertCell(2).innerText = `R$ ${ativo.totalCompra.toFixed(2)}`;
+                row.insertCell(3).innerText = `R$ ${ativo.precoMedio.toFixed(2)}`;
+                row.insertCell(4).innerText = ativo.valorAtual ? `R$ ${ativo.valorAtual}` : "N/D";
+
+                row.addEventListener("click", () => selecionarAtivo(ticker));
+            }
+        }
+
+        function atualizarTabelaTipos() {
+            let tabela = document.querySelector("#tabela-tipos tbody");
+            tabela.innerHTML = "";
+            let totalAtivos = Object.values(ativos).reduce((sum, ativo) => sum + ativo.quantidade, 0);
+            let tipos = {};
+
+            for (let ativo of Object.values(ativos)) {
+                tipos[ativo.tipo] = (tipos[ativo.tipo] || 0) + ativo.quantidade;
+            }
+
+            for (let tipo in tipos) {
+                let row = tabela.insertRow();
+                row.insertCell(0).innerText = tipo.toUpperCase();
+                row.insertCell(1).innerText = tipos[tipo];
+                row.insertCell(2).innerText = ((tipos[tipo] / totalAtivos) * 100).toFixed(2) + " %";
+            }
+        }
+
+        const fetchStockPrice = async (stockSymbol) => {
+            try {
+                const response = await fetch(`https://brapi.dev/api/quote/${stockSymbol}?token=iPL6gFQq1k2vqMzwZ7F7ux`);
+                const data = await response.json();
+                console.log(data);
+                return data.results[0]?.regularMarketPrice || "N/A";
+            } catch (error) {
+                console.error(`Erro ao buscar preço da ação ${stockSymbol}:`, error);
+                return "Erro";
+            }
+        };
+
+        atualizarTabela();
+        atualizarTabelaTipos();
+    </script>
+
+</body>
+</html>
