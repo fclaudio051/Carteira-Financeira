@@ -28,7 +28,7 @@ Este é um projeto simples para registro e acompanhamento de ativos financeiros,
 
 1. **Clone o repositório:**
    ```bash
-   git clone https://github.com/seu-usuario/registro-acoes.git
+   git clone https://github.com/fclaudio051/Carteira-Financeira.git
    ```
 2. **Abra o arquivo `index.html` no navegador.**
 3. **Adicione ativos clicando no botão "Adicionar Ativo".**
